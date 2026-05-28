@@ -98,3 +98,32 @@ steps:
 ## Notes
 
 The recorder uses browser automation to discover streams when a channel does not expose a stable feed URL, then records the selected audio/video tracks without re-encoding. This version starts the recording at the requested time in the current process. A real system scheduler can be layered on top of the same command later.
+
+## Publishing
+
+Install packaging tools:
+
+```powershell
+python -m pip install -e ".[dev]"
+```
+
+Build and check the package:
+
+```powershell
+python -m build
+python -m twine check dist/*
+```
+
+Publish to TestPyPI first:
+
+```powershell
+python -m twine upload --repository testpypi dist/*
+```
+
+Publish to PyPI:
+
+```powershell
+python -m twine upload dist/*
+```
+
+Before publishing, update `version` in `pyproject.toml` and `__version__` in `src/tv_recorder/__init__.py`, then rebuild from a clean `dist` directory.

@@ -1,0 +1,644 @@
+sources:
+  radio-canada.ca:
+    display_name: ICI Radio-Canada Tele
+    start_url: "https://ici.radio-canada.ca/tele/en-direct"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://services.radio-canada.ca/media/validation/v2/?appCode=medianetlive&connectionType=hd&deviceType=ipad&idMedia=cbft&multibitrate=true&output=json&tech=hls&manifestVersion=2"
+    stream_response_url_patterns:
+      - "services\\.radio-canada\\.ca/media/validation/v2/"
+    stream_response_json_keys:
+      - "url"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+      - "originpath=/linear/hls"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "fre"
+        comment: "Français"
+        reject_comments:
+          - "audio_dv"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  tvaplus.ca:
+    display_name: TVA+
+    start_url: "https://www.tvaplus.ca/tva/en-direct"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 1080
+        direct_variant: false
+      audio:
+        language: "fre"
+    steps:
+      - action: wait_for_stream
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  telequebec.tv:
+    display_name: Télé-Québec
+    start_url: "https://telequebec.tv/regarder/en-direct/telequebec"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "fre"
+    steps:
+      - action: wait_for_stream
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  cpac-english:
+    display_name: CPAC English
+    start_url: "https://www.cpac.ca/en"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://cpac-ca-live.cdn.vustreams.com/groupa/live/f9809cea-1e07-47cd-a94d-2ddd3e1351db/live.isml/.m3u8"
+    output_extension: "mp4"
+    recording:
+      hls:
+        separate_audio: true
+      video:
+        height: 720
+        direct_variant: false
+      audio:
+        language: "en"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  cpac-francais:
+    display_name: CPAC français
+    start_url: "https://www.cpac.ca/fr"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://cpac-ca-live.cdn.vustreams.com/groupa/live/f9809cea-1e07-47cd-a94d-2ddd3e1351db/live.isml/.m3u8"
+    output_extension: "mp4"
+    recording:
+      hls:
+        separate_audio: true
+      video:
+        height: 720
+        direct_variant: false
+      audio:
+        language: "fr"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  canal-assemblee-nationale:
+    display_name: Canal de l'Assemblée nationale
+    start_url: "https://www.assnat.qc.ca/fr/lien/12553.html"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://cdn3.wowza.com/5/bkFzbG5oWS9QSisz/diffusion/canal17/playlist.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "fre"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  canal-savoir:
+    display_name: Canal Savoir
+    start_url: "https://savoir.media/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://hls.savoir.media/live/stream.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "fre"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-national:
+    display_name: Global News National
+    start_url: "https://globalnews.ca/live/national/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupd/live/49a91e7f-1023-430f-8d66-561055f3d0f7/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-halifax:
+    display_name: Global News Halifax
+    start_url: "https://globalnews.ca/live/halifax/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupa/live/b60d1d57-2851-4c29-bf5c-36feed988e57/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-winnipeg:
+    display_name: Global News Winnipeg
+    start_url: "https://globalnews.ca/live/winnipeg/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupb/live/564df695-94f9-4f27-b1b9-0a936ab01721/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-montreal:
+    display_name: Global News Montreal
+    start_url: "https://globalnews.ca/live/montreal/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupa/live/6bfb7f13-9d9d-4211-9c50-fb56330e4ccd/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-okanagan:
+    display_name: Global News Okanagan
+    start_url: "https://globalnews.ca/live/okanagan/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupc/live/9fd97fb0-baa8-4191-bd2c-59aa5c9a1d48/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-saskatoon:
+    display_name: Global News Saskatoon
+    start_url: "https://globalnews.ca/live/saskatoon/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupc/live/f191ef59-6c28-42ba-86d0-d47df5280249/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-regina:
+    display_name: Global News Regina
+    start_url: "https://globalnews.ca/live/regina/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupb/live/3062d0e3-ed4c-4f47-8482-95648250f4b8/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-kingston:
+    display_name: Global News Kingston
+    start_url: "https://globalnews.ca/live/kingston/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupa/live/023a9e25-f0cf-4d97-af9f-5c665b7d45b9/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-peterborough:
+    display_name: Global News Peterborough
+    start_url: "https://globalnews.ca/live/peterborough/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupa/live/5eb39b64-58e8-47d2-97ca-25e8cd760b63/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-lethbridge:
+    display_name: Global News Lethbridge
+    start_url: "https://globalnews.ca/live/lethbridge/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupc/live/cea96246-9af2-4373-932f-cdd3f8db2bc0/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-calgary:
+    display_name: Global News Calgary
+    start_url: "https://globalnews.ca/live/calgary/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupd/live/8970c668-40cd-4ca9-8c4d-25fd04f619b5/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-edmonton:
+    display_name: Global News Edmonton
+    start_url: "https://globalnews.ca/live/edmonton/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupb/live/215422c9-d1b9-4009-aaca-32e403f22b01/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-toronto:
+    display_name: Global News Toronto
+    start_url: "https://globalnews.ca/live/toronto/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupd/live/deb8cec5-87fb-460a-ab82-0929374fc5fb/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  globalnews-bc:
+    display_name: Global News BC
+    start_url: "https://globalnews.ca/live/bc/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live.corusdigitaldev.com/groupa/live/48a5882b-a1ec-42d7-bfd7-6c2739e737da/live.isml/.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio: {}
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  arte:
+    display_name: ARTE
+    start_url: "https://www.arte.tv/fr/direct/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://dash4.antik.sk/live/test_arte_avc_25p/playlist.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "fre"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  cnews:
+    display_name: CNEWS
+    start_url: "https://www.cnews.fr/le-direct"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_url_reject_patterns:
+      - "dmxleo\\.dailymotion\\.com"
+      - "cdndirector\\.dailymotion\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 480
+      audio:
+        language: "fra"
+    steps:
+      - action: wait_for_stream
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  france24-fr:
+    display_name: France 24 français
+    start_url: "https://www.france24.com/fr/direct"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://dash4.antik.sk/live/test_france24_france/playlist.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 1080
+      audio:
+        language: "fre"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  euronews-fr:
+    display_name: Euronews français
+    start_url: "https://fr.euronews.com/live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://a-cdn.klowdtv.com/live3/euronews_720p/playlist.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "fra"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  africanews-fr:
+    display_name: Africanews français
+    start_url: "https://fr.africanews.com/live/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://cdn-euronews.akamaized.net/live/eds/africanews-fr/25050/index.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "fra"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  aljazeera-english:
+    display_name: Al Jazeera English
+    start_url: "https://www.aljazeera.com/live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://live-hls-web-aje-gcp.thehlive.com/AJE/index.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  trt-world:
+    display_name: TRT World
+    start_url: "https://www.trtworld.com/video/tv"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://tv-trtworld.medya.trt.com.tr/master.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  france24-en:
+    display_name: France 24 English
+    start_url: "https://www.france24.com/en/live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://dash3.antik.sk/live/test_france24_eng/playlist.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  euronews-en:
+    display_name: Euronews English
+    start_url: "https://www.euronews.com/live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://a-cdn.klowdtv.com/live3/euronews_720p/playlist.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  africanews-en:
+    display_name: Africanews English
+    start_url: "https://www.africanews.com/live/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://c3c275b999764df8a2dd55ffe2996818.mediatailor.eu-west-1.amazonaws.com/v1/master/0547f18649bd788bec7b67b746e47670f558b6b2/production-LiveChannel-6576/bitok/eyJzdGlkIjoiOTU0NDAyODQtOTU0My00Yzc2LThmZjQtNDRhY2YwYmQxYTYwIiwibWt0IjoicGwiLCJjaCI6NjYwNiwicHRmIjo1fQ==/26036/africanews-en.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  dw-english:
+    display_name: DW English
+    start_url: "https://www.dw.com/en/media-center/live-tv/s-100825"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  nhk-world-japan:
+    display_name: NHK WORLD-JAPAN
+    start_url: "https://www3.nhk.or.jp/nhkworld/en/live/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://masterpl.hls.nhkworld.jp/hls/w/live/smarttv.m3u8"
+    output_extension: "mp4"
+    recording:
+      hls:
+        separate_audio: true
+      video:
+        height: 720
+        direct_variant: false
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  cna-singapore:
+    display_name: CNA Singapore
+    start_url: "https://www.channelnewsasia.com/watch/live-tv-1441426"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://d2e1asnsl7br7b.cloudfront.net/7782e205e72f43aeb4a48ec97f66ebbe/index.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  cgtn:
+    display_name: CGTN
+    start_url: "https://www.cgtn.com/tv"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://english-livebkali.cgtn.com/live/encgtn.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  arirang-tv:
+    display_name: Arirang TV
+    start_url: "https://www.arirang.com/live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://amdlive-ch01-g-ctnd-com.akamaized.net/arirang_1gch/smil:arirang_1gch.smil/playlist.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  gb-news:
+    display_name: GB News
+    start_url: "https://www.gbnews.com/watch/live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://cdn-apse1-prod.tsv2.amagi.tv/linear/amg01076-lightningintern-gbnewsnz-samsungnz/playlist.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  abc-news-live:
+    display_name: ABC News Live
+    start_url: "https://abcnews.go.com/Live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://abcnews-streams.akamaized.net/hls/live/2023566/abcnewshudson7/master.m3u8"
+    stream_url_reject_patterns:
+      - "media\\.dssott\\.com"
+      - "cmp-abcnews"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  cbs-news:
+    display_name: CBS News 24/7
+    start_url: "https://www.cbsnews.com/live/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://news20e7hhcb.airspace-cdn.cbsivideo.com/index.m3u8"
+    stream_url_reject_patterns:
+      - "dai\\.google\\.com"
+      - "prod\\.vodvideo\\.cbsnews\\.com"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  livenow-fox:
+    display_name: LiveNOW from FOX
+    start_url: "https://www.livenowfox.com/live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00488-foxdigital-livenowbyfox-lgus/playlist.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  nasa-live:
+    display_name: NASA Live
+    start_url: "https://www.nasa.gov/live/"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps:
+      - action: wait_for_stream
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  scripps-news:
+    display_name: Scripps News
+    start_url: "https://www.scrippsnews.com/live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://content.uplynk.com/channel/4bb4901b934c4e029fd4c1abfc766c37.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
+  bloomberg-tv:
+    display_name: Bloomberg TV
+    start_url: "https://www.bloomberg.com/live"
+    stream_url_pattern: "\\.m3u8(\\?|$)"
+    stream_request_urls:
+      - "https://www.bloomberg.com/media-manifest/streams/phoenix-us.m3u8"
+    output_extension: "mp4"
+    recording:
+      video:
+        height: 720
+      audio:
+        language: "eng"
+    steps: []
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"

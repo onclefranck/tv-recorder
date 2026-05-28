@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tv-recorder"
+version = "0.1.0"
+description = "CLI to find an HLS stream with Playwright and record it with ffmpeg."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "tv-recorder contributors" }
+]
+dependencies = [
+  "imageio-ffmpeg>=0.6.0",
+  "playwright>=1.44",
+  "pytimeparse2>=1.7.1",
+  "PyYAML>=6.0.1"
+]
+
+[project.scripts]
+tv-recorder = "tv_recorder.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tv_recorder"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

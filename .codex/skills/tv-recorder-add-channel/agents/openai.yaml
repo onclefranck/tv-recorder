@@ -1,0 +1,4 @@
+interface:
+  display_name: "TV Recorder Add Channel"
+  short_description: "Add and validate channels in tv-recorder defaults.yaml."
+  default_prompt: "Add a new tv-recorder channel entry to defaults.yaml and validate it with a short recording smoke test."

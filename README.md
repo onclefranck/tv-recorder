@@ -38,9 +38,12 @@ tv-recorder globalnews-national now 30m
 tv-recorder globalnews-montreal now 30m
 tv-recorder radio-canada.ca now 10m --headful
 tv-recorder radio-canada.ca now 10m --dry-run
+tv-recorder radio-canada.ca now 10m --debug
 ```
 
 `START` accepts `now` or a local ISO date. `DURATION` accepts values such as `90s`, `30m`, `2h`, or `01:30:00`.
+
+By default, the CLI runs at `--info` level and prints the effective recording URL or inputs. During recording, a small activity indicator moves when ffmpeg emits progress. Use `--debug` to show discovery details, step results, and ffmpeg output.
 
 ## Configuration YAML
 

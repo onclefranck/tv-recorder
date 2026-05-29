@@ -27,6 +27,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout-ms", type=int, default=45_000, help="Playwright timeout in milliseconds.")
     parser.add_argument("--ffmpeg", default="ffmpeg", help="Override the bundled imageio-ffmpeg binary.")
     parser.add_argument("--dry-run", action="store_true", help="Detect the stream and print the ffmpeg command.")
+    log_group = parser.add_mutually_exclusive_group()
+    log_group.add_argument("--info", dest="log_level", action="store_const", const="info", default="info", help="Show normal progress and selected HLS URLs.")
+    log_group.add_argument("--debug", dest="log_level", action="store_const", const="debug", help="Show discovery steps and ffmpeg output.")
     return parser
 
 
@@ -51,11 +54,16 @@ def main(argv: list[str] | None = None) -> int:
         delay = seconds_until(start)
 
         if delay > 0:
-            print(f"Waiting until {start.isoformat()} ({int(delay)} s).", flush=True)
+            _info(args, f"Waiting until {start.isoformat()} ({int(delay)} s).")
             time.sleep(delay)
 
-        print(f"Detecting stream for {source.display_name}...", flush=True)
-        stream = find_stream(source, headless=not args.headful, timeout_ms=args.timeout_ms)
+        _info(args, f"Detecting stream for {source.display_name}...")
+        stream = find_stream(
+            source,
+            headless=not args.headful,
+            timeout_ms=args.timeout_ms,
+            debug_log=lambda message: _debug(args, message),
+        )
         output_path = build_output_path(args.output_dir, source, start)
         plan = build_ffmpeg_plan(
             stream,
@@ -65,15 +73,15 @@ def main(argv: list[str] | None = None) -> int:
             require_ffmpeg=not args.dry_run,
             recording=source.recording,
         )
+        _print_stream_urls(args, stream)
 
         if args.dry_run:
-            print(f"Detected stream: {stream.url}")
             print("ffmpeg command:")
             print(shlex.join(plan.command))
             return 0
 
-        print(f"Recording to {plan.output_path}", flush=True)
-        exit_code = run_recording(plan)
+        _info(args, f"Recording to {plan.output_path}")
+        exit_code = run_recording(plan, debug=args.log_level == "debug")
         if exit_code != 0:
             print(f"ffmpeg exited with code {exit_code}.", file=sys.stderr)
         return exit_code
@@ -92,6 +100,26 @@ def list_sources(config: dict) -> None:
     for key in sorted(sources):
         display_name = sources[key].get("display_name") or key
         print(f"{key.ljust(width)}  {display_name}")
+
+
+def _info(args, message: str) -> None:
+    if args.log_level in {"info", "debug"}:
+        print(message, flush=True)
+
+
+def _debug(args, message: str) -> None:
+    if args.log_level == "debug":
+        print(f"DEBUG {message}", flush=True)
+
+
+def _print_stream_urls(args, stream) -> None:
+    discovered = stream.discovered_url or stream.url
+    _debug(args, f"Discovered HLS URL: {discovered}")
+    if stream.input_urls:
+        for index, input_url in enumerate(stream.input_urls, start=1):
+            _info(args, f"Recording HLS input {index}: {input_url}")
+        return
+    _info(args, f"Recording HLS URL: {stream.url}")
 
 
 if __name__ == "__main__":

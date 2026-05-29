@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from typing import Callable
 from urllib.parse import parse_qsl, unquote, urljoin, urlparse, urlunparse
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -21,6 +22,7 @@ class StreamInfo:
     user_agent: str | None
     cookies: str
     input_urls: tuple[str, ...] = ()
+    discovered_url: str = ""
 
 
 @dataclass(frozen=True)
@@ -29,7 +31,13 @@ class StepResult:
     done: bool
 
 
-def find_stream(source: SourceConfig, *, headless: bool = True, timeout_ms: int = 45_000) -> StreamInfo:
+def find_stream(
+    source: SourceConfig,
+    *,
+    headless: bool = True,
+    timeout_ms: int = 45_000,
+    debug_log: Callable[[str], None] | None = None,
+) -> StreamInfo:
     pattern = re.compile(source.stream_url_pattern)
     response_patterns = [re.compile(item) for item in source.stream_response_url_patterns]
     reject_patterns = [re.compile(item) for item in source.stream_url_reject_patterns]
@@ -46,9 +54,11 @@ def find_stream(source: SourceConfig, *, headless: bool = True, timeout_ms: int 
         def remember(url: str) -> None:
             for stream_url in _stream_urls_from_observed_url(url, pattern):
                 if any(reject.search(stream_url) for reject in reject_patterns):
+                    _debug(debug_log, f"Rejected HLS candidate: {stream_url}")
                     continue
                 if stream_url not in candidates:
                     candidates.append(stream_url)
+                    _debug(debug_log, f"Detected HLS candidate: {stream_url}")
 
         def watch_page(watched_page) -> None:
             watched_page.on("request", lambda request: remember(request.url))
@@ -70,19 +80,23 @@ def find_stream(source: SourceConfig, *, headless: bool = True, timeout_ms: int 
 
         for url in source.stream_request_urls:
             try:
+                _debug(debug_log, f"Requesting configured stream URL: {url}")
                 remember(url)
                 response = context.request.get(url, timeout=timeout_ms)
                 remember(response.url)
                 for stream_url in _stream_urls_from_json(response.json(), source.stream_response_json_keys):
                     remember(stream_url)
-            except Exception:
+                _debug(debug_log, f"Configured stream request completed: {response.status} {response.url}")
+            except Exception as exc:
+                _debug(debug_log, f"Configured stream request failed: {url} ({exc})")
                 pass
 
         if not candidates or source.steps:
             page.goto(source.start_url, wait_until="domcontentloaded", timeout=timeout_ms)
+            _debug(debug_log, f"Opened page: {page.url}")
 
             for step in source.steps:
-                page = _run_step(page, context, step, timeout_ms, candidates).page
+                page = _run_step(page, context, step, timeout_ms, candidates, debug_log).page
 
         if not candidates:
             try:
@@ -101,15 +115,31 @@ def find_stream(source: SourceConfig, *, headless: bool = True, timeout_ms: int 
                 "or adjust the click recipe in the config."
             )
 
-        selected = _prefer_master_playlist(candidates)
-        selected = _resolve_configured_variant(context, selected, source.recording)
+        discovered = _prefer_master_playlist(candidates)
+        selected = _resolve_configured_variant(context, discovered, source.recording)
+        if selected != discovered:
+            _debug(debug_log, f"Selected configured HLS variant: {selected}")
         input_urls = _resolve_separate_hls_inputs(context, selected, source.recording)
+        for index, input_url in enumerate(input_urls, start=1):
+            _debug(debug_log, f"Selected separate HLS input {index}: {input_url}")
         cookies = _cookie_header(context.cookies([selected]))
         user_agent = source.user_agent or page.evaluate("navigator.userAgent")
         page_url = page.url if page.url != "about:blank" else source.start_url
         browser.close()
 
-    return StreamInfo(url=selected, page_url=page_url, user_agent=user_agent, cookies=cookies, input_urls=input_urls)
+    return StreamInfo(
+        url=selected,
+        page_url=page_url,
+        user_agent=user_agent,
+        cookies=cookies,
+        input_urls=input_urls,
+        discovered_url=discovered,
+    )
+
+
+def _debug(debug_log: Callable[[str], None] | None, message: str) -> None:
+    if debug_log:
+        debug_log(message)
 
 
 def _install_chromium() -> None:
@@ -137,15 +167,27 @@ def _click_button_by_selector(page, selector: str, timeout_ms: int, *, required:
         return False
 
 
-def _run_step(page, context, step: dict, default_timeout_ms: int, candidates: list[str]) -> StepResult:
+def _run_step(
+    page,
+    context,
+    step: dict,
+    default_timeout_ms: int,
+    candidates: list[str],
+    debug_log: Callable[[str], None] | None = None,
+) -> StepResult:
     action = _required_value(step, "action")
     try:
         handler = globals()[f"_run_{action}_step"]
     except KeyError as exc:
         raise ValueError(f"Unknown recipe action: {action}") from exc
     result = handler(page, context, step, default_timeout_ms, candidates)
+    _debug(
+        debug_log,
+        f"Step {action}: done={result.done} page={getattr(result.page, 'url', 'unknown')} candidates={len(candidates)}",
+    )
     if not result.done and step.get("fallback"):
-        return _run_step(page, context, step["fallback"], default_timeout_ms, candidates)
+        _debug(debug_log, f"Step {action}: running fallback")
+        return _run_step(page, context, step["fallback"], default_timeout_ms, candidates, debug_log)
     return result
 
 

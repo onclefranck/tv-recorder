@@ -20,6 +20,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Validate release version
+        run: python scripts/check_version.py --tag "${{ github.event.release.tag_name }}"
+
       - name: Install build tools
         run: python -m pip install build
 

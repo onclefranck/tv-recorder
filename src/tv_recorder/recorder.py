@@ -3,6 +3,9 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -315,9 +318,18 @@ def _media_duration_seconds(ffmpeg: str, path: Path) -> float | None:
     )
 
 
-def run_recording(plan: RecordingPlan) -> int:
+def run_recording(plan: RecordingPlan, *, debug: bool = False) -> int:
     plan.capture_path.parent.mkdir(parents=True, exist_ok=True)
-    process = subprocess.Popen(plan.command, stdin=subprocess.PIPE)
+    output = None if debug else subprocess.DEVNULL
+    stderr = None if debug else subprocess.PIPE
+    process = subprocess.Popen(
+        plan.command,
+        stdin=subprocess.PIPE,
+        stdout=output,
+        stderr=stderr,
+    )
+    activity = _ActivityIndicator("ffmpeg activity")
+    activity.start(process.stderr if not debug else None)
     try:
         exit_code = process.wait(timeout=plan.duration_seconds + 60)
     except subprocess.TimeoutExpired:
@@ -334,6 +346,8 @@ def run_recording(plan: RecordingPlan) -> int:
             process.stdin.write(b"q\n")
             process.stdin.flush()
         exit_code = process.wait()
+    finally:
+        activity.stop()
 
     if exit_code != 0:
         return exit_code
@@ -345,7 +359,7 @@ def run_recording(plan: RecordingPlan) -> int:
         plan.capture_path.replace(plan.output_path)
         return _validate_duration(plan)
 
-    final = subprocess.run(plan.final_command)
+    final = subprocess.run(plan.final_command, stdout=output, stderr=output)
     if final.returncode == 0:
         plan.capture_path.unlink(missing_ok=True)
         return _validate_duration(plan)
@@ -364,3 +378,45 @@ def _validate_duration(plan: RecordingPlan) -> int:
         )
         return 1
     return 0
+
+
+class _ActivityIndicator:
+    def __init__(self, label: str) -> None:
+        self.label = label
+        self._enabled = sys.stderr.isatty()
+        self._frames = "|/-\\"
+        self._index = 0
+        self._next_update = 0.0
+        self._thread: threading.Thread | None = None
+
+    def start(self, stream) -> None:
+        if stream is None:
+            return
+        self._thread = threading.Thread(target=self._drain, args=(stream,), daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        if self._thread:
+            self._thread.join(timeout=2)
+        if self._enabled:
+            sys.stderr.write("\r" + " " * (len(self.label) + 4) + "\r")
+            sys.stderr.flush()
+
+    def _drain(self, stream) -> None:
+        while True:
+            chunk = stream.read(1)
+            if not chunk:
+                return
+            self._tick()
+
+    def _tick(self) -> None:
+        if not self._enabled:
+            return
+        now = time.monotonic()
+        if now < self._next_update:
+            return
+        self._next_update = now + 0.15
+        frame = self._frames[self._index % len(self._frames)]
+        self._index += 1
+        sys.stderr.write(f"\r{self.label} {frame}")
+        sys.stderr.flush()

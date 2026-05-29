@@ -38,9 +38,12 @@ tv-recorder globalnews-national now 30m
 tv-recorder globalnews-montreal now 30m
 tv-recorder radio-canada.ca now 10m --headful
 tv-recorder radio-canada.ca now 10m --dry-run
+tv-recorder radio-canada.ca now 10m --debug
 ```
 
 `START` accepts `now` or a local ISO date. `DURATION` accepts values such as `90s`, `30m`, `2h`, or `01:30:00`.
+
+By default, the CLI runs at `--info` level and prints the effective recording URL or inputs. During recording, a small activity indicator moves when ffmpeg emits progress. Use `--debug` to show discovery details, step results, and ffmpeg output.
 
 ## Configuration YAML
 
@@ -110,6 +113,7 @@ python -m pip install -e ".[dev]"
 Build and check the package:
 
 ```powershell
+python scripts/check_version.py --tag v0.1.0
 python -m build
 python -m twine check dist/*
 ```
@@ -126,4 +130,4 @@ Publish to PyPI:
 python -m twine upload dist/*
 ```
 
-Before publishing, update `version` in `pyproject.toml` and `__version__` in `src/tv_recorder/__init__.py`, then rebuild from a clean `dist` directory.
+Before publishing, update `version` in `pyproject.toml`, then rebuild from a clean `dist` directory. The package `__version__` is resolved from the package metadata generated from `pyproject.toml`. The GitHub release tag must match the version in `pyproject.toml`; a leading `v` is accepted, so `v0.1.0` matches `0.1.0`.

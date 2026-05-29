@@ -39,11 +39,31 @@ tv-recorder globalnews-montreal now 30m
 tv-recorder radio-canada.ca now 10m --headful
 tv-recorder radio-canada.ca now 10m --dry-run
 tv-recorder radio-canada.ca now 10m --debug
+tv-recorder radio-canada.ca now 10m --comskip
+tv-recorder comskip recordings\tvaplus.ca-20260529-190942.mp4
 ```
 
 `START` accepts `now` or a local ISO date. `DURATION` accepts values such as `90s`, `30m`, `2h`, or `01:30:00`.
 
 By default, the CLI runs at `--info` level and prints the effective recording URL or inputs. During recording, a small activity indicator moves when ffmpeg emits progress. Use `--debug` to show discovery details, step results, and ffmpeg output.
+
+## Commercial Marking
+
+Use `--comskip` to run Comskip after a successful recording and create a commercial-free MP4. The original recording is kept unchanged. Comskip writes sidecar files next to it, including an `.edl` file when commercials are detected:
+
+```powershell
+tv-recorder radio-canada.ca now 1h --comskip
+```
+
+Run the same post-processing on an existing recording:
+
+```powershell
+tv-recorder comskip recordings\tvaplus.ca-20260529-190942.mp4
+```
+
+The channel settings are selected from the file name prefix, such as `tvaplus.ca-...mp4`.
+
+On Windows, Comskip is downloaded automatically on first use if `comskip.exe` is not already available. It is installed inside the active Python environment under `share\tv-recorder\comskip\`, which keeps a `pipx` installation self-contained.
 
 ## Configuration YAML
 
@@ -62,6 +82,7 @@ Each source can define:
 - `stream_response_json_keys`: JSON keys whose values should be treated as stream URLs.
 - `stream_url_reject_patterns`: stream URL patterns to ignore.
 - `recording`: video/audio track selection.
+- `comskip`: commercial marking and cutting settings.
 - `steps`: browser interaction recipe before stream detection.
 - `output_extension`: output file extension.
 - `user_agent`: optional user-agent for browser and recorder requests.

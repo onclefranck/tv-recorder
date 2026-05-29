@@ -6,6 +6,8 @@ import sys
 import time
 from pathlib import Path
 
+from tv_recorder import recorder
+from tv_recorder.comskip import build_comskip_plan, cut_commercials, run_comskip
 from tv_recorder.config import get_source, load_config
 from tv_recorder.duration import parse_duration, parse_start, seconds_until
 from tv_recorder.recorder import build_ffmpeg_plan, build_output_path, run_recording
@@ -26,6 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--headful", action="store_true", help="Show Chromium while detecting the stream.")
     parser.add_argument("--timeout-ms", type=int, default=45_000, help="Playwright timeout in milliseconds.")
     parser.add_argument("--ffmpeg", default="ffmpeg", help="Override the bundled imageio-ffmpeg binary.")
+    parser.add_argument("--comskip", action="store_true", help="Run Comskip after recording and create a commercial-free MP4.")
     parser.add_argument("--dry-run", action="store_true", help="Detect the stream and print the ffmpeg command.")
     log_group = parser.add_mutually_exclusive_group()
     log_group.add_argument("--info", dest="log_level", action="store_const", const="info", default="info", help="Show normal progress and selected HLS URLs.")
@@ -42,6 +45,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.list:
             list_sources(config)
             return 0
+
+        if args.source == "comskip":
+            if args.start is None or args.duration is not None:
+                parser.error("comskip requires exactly one recording file path")
+            recording_path = Path(args.start)
+            return run_existing_comskip(args, config, recording_path)
 
         missing = [name for name in ("source", "start", "duration") if getattr(args, name) is None]
         if missing:
@@ -78,13 +87,49 @@ def main(argv: list[str] | None = None) -> int:
         if args.dry_run:
             print("ffmpeg command:")
             print(shlex.join(plan.command))
+            if args.comskip:
+                comskip_plan = build_comskip_plan(
+                    plan.output_path,
+                    require_comskip=False,
+                    auto_install=False,
+                    options=source.comskip,
+                )
+                print("comskip command:")
+                print(shlex.join(comskip_plan.command))
             return 0
 
         _info(args, f"Recording to {plan.output_path}")
         exit_code = run_recording(plan, debug=args.log_level == "debug")
         if exit_code != 0:
             print(f"ffmpeg exited with code {exit_code}.", file=sys.stderr)
-        return exit_code
+            return exit_code
+
+        if args.comskip:
+            comskip_plan = build_comskip_plan(
+                plan.output_path,
+                auto_install=True,
+                options=source.comskip,
+                log=lambda message: _info(args, message),
+            )
+            _info(args, f"Running Comskip on {comskip_plan.recording_path}")
+            _debug(args, f"Comskip command: {shlex.join(comskip_plan.command)}")
+            exit_code = run_comskip(comskip_plan, debug=args.log_level == "debug")
+            if exit_code != 0:
+                print(f"comskip exited with code {exit_code}.", file=sys.stderr)
+                return exit_code
+            _info(args, f"Comskip EDL: {comskip_plan.edl_path}")
+            _info(args, f"Writing commercial-free MP4 to {comskip_plan.commercial_free_path}")
+            exit_code = cut_commercials(
+                comskip_plan,
+                ffmpeg_path=plan.ffmpeg_path,
+                debug=args.log_level == "debug",
+            )
+            if exit_code != 0:
+                print(f"commercial cutting exited with code {exit_code}.", file=sys.stderr)
+                return exit_code
+            _info(args, f"Commercial-free MP4: {comskip_plan.commercial_free_path}")
+
+        return 0
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
@@ -100,6 +145,53 @@ def list_sources(config: dict) -> None:
     for key in sorted(sources):
         display_name = sources[key].get("display_name") or key
         print(f"{key.ljust(width)}  {display_name}")
+
+
+def run_existing_comskip(args, config: dict, recording_path: Path) -> int:
+    if not recording_path.exists():
+        raise FileNotFoundError(recording_path)
+
+    source_key = _source_key_from_recording(config, recording_path)
+    source = get_source(config, source_key) if source_key else None
+    if source:
+        _info(args, f"Using Comskip settings for {source.display_name}.")
+    else:
+        _info(args, "Using default Comskip settings.")
+
+    comskip_plan = build_comskip_plan(
+        recording_path,
+        auto_install=True,
+        options=source.comskip if source else None,
+        log=lambda message: _info(args, message),
+    )
+    _info(args, f"Running Comskip on {comskip_plan.recording_path}")
+    _debug(args, f"Comskip command: {shlex.join(comskip_plan.command)}")
+    exit_code = run_comskip(comskip_plan, debug=args.log_level == "debug")
+    if exit_code != 0:
+        print(f"comskip exited with code {exit_code}.", file=sys.stderr)
+        return exit_code
+
+    _info(args, f"Comskip EDL: {comskip_plan.edl_path}")
+    _info(args, f"Writing commercial-free MP4 to {comskip_plan.commercial_free_path}")
+    exit_code = cut_commercials(
+        comskip_plan,
+        ffmpeg_path=recorder._resolve_ffmpeg(args.ffmpeg, require_ffmpeg=True),
+        debug=args.log_level == "debug",
+    )
+    if exit_code != 0:
+        print(f"commercial cutting exited with code {exit_code}.", file=sys.stderr)
+        return exit_code
+    _info(args, f"Commercial-free MP4: {comskip_plan.commercial_free_path}")
+    return 0
+
+
+def _source_key_from_recording(config: dict, recording_path: Path) -> str | None:
+    sources = config.get("sources") or {}
+    name = recording_path.name
+    matches = [key for key in sources if name.startswith(f"{key}-")]
+    if not matches:
+        return None
+    return max(matches, key=len)
 
 
 def _info(args, message: str) -> None:

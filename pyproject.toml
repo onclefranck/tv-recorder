@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.24"]
+requires = ["hatchling>=1.24", "hatch-requirements-txt>=0.4.1"]
 build-backend = "hatchling.build"
 
 [project]
@@ -26,13 +26,7 @@ classifiers = [
   "Topic :: Multimedia :: Video",
   "Topic :: Utilities",
 ]
-dependencies = [
-  "click>=8.1",
-  "imageio-ffmpeg>=0.6.0",
-  "playwright>=1.44",
-  "pytimeparse2>=1.7.1",
-  "PyYAML>=6.0.1",
-]
+dynamic = ["dependencies"]
 
 [project.optional-dependencies]
 dev = [
@@ -54,6 +48,9 @@ packages = ["src/tv_recorder"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/tv_recorder/defaults.yaml" = "tv_recorder/defaults.yaml"
+
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

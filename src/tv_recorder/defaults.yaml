@@ -21,6 +21,16 @@ sources:
         comment: "Français"
         reject_comments:
           - "audio_dv"
+    comskip:
+      min_segment_seconds: 15
+      min_break_seconds: 105
+      break_gap_tolerance_seconds: 2
+      ini:
+        min_commercial_size: 25
+        min_commercialbreak: 105
+        max_commercialbreak: 600
+        delete_show_before_first_commercial: 0
+        delete_show_after_last_commercial: 0
     steps: []
     user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"
   tvaplus.ca:
@@ -36,6 +46,16 @@ sources:
         direct_variant: false
       audio:
         language: "fre"
+    comskip:
+      min_segment_seconds: 15
+      min_break_seconds: 105
+      break_gap_tolerance_seconds: 2
+      ini:
+        min_commercial_size: 25
+        min_commercialbreak: 105
+        max_commercialbreak: 600
+        delete_show_before_first_commercial: 0
+        delete_show_after_last_commercial: 0
     steps:
       - action: wait_for_stream
     user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36"

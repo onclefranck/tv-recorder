@@ -20,6 +20,7 @@ class SourceConfig:
     stream_url_reject_patterns: tuple[str, ...] = ()
     output_extension: str = "mp4"
     recording: dict[str, Any] | None = None
+    comskip: dict[str, Any] | None = None
     steps: tuple[dict[str, Any], ...] = ()
     user_agent: str | None = None
 
@@ -54,6 +55,7 @@ def get_source(config: dict[str, Any], source_key: str) -> SourceConfig:
         stream_url_reject_patterns=tuple(raw.get("stream_url_reject_patterns") or ()),
         output_extension=raw.get("output_extension") or "mp4",
         recording=raw.get("recording"),
+        comskip=raw.get("comskip"),
         steps=tuple(raw.get("steps") or ()),
         user_agent=raw.get("user_agent"),
     )

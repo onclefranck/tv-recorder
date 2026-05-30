@@ -21,6 +21,7 @@ DEFAULT_INI = {
     "output_txt": 1,
     "live_tv": 1,
 }
+MIN_KEEP_INTERVAL_SECONDS = 1.0
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,16 @@ def cut_commercials(plan: ComskipPlan, *, ffmpeg_path: str, debug: bool = False)
             ffmpeg_path,
             plan.recording_path,
             plan.commercial_free_path,
+            debug=debug,
+        )
+    if len(keep_intervals) == 1:
+        start, end = keep_intervals[0]
+        return _copy_interval_to_mp4(
+            ffmpeg_path,
+            plan.recording_path,
+            plan.commercial_free_path,
+            start=start,
+            end=end,
             debug=debug,
         )
 
@@ -243,7 +254,11 @@ def _keep_intervals(cuts: list[tuple[float, float]], duration: float | None) -> 
         cursor = max(cursor, end)
     if cursor < duration:
         intervals.append((cursor, duration))
-    return [(start, end) for start, end in intervals if end is None or end - start > 0.05]
+    return [
+        (start, end)
+        for start, end in intervals
+        if end is None or end - start >= MIN_KEEP_INTERVAL_SECONDS
+    ]
 
 
 def _remux_to_mp4(ffmpeg_path: str, input_path: Path, output_path: Path, *, debug: bool) -> int:
@@ -266,6 +281,46 @@ def _remux_to_mp4(ffmpeg_path: str, input_path: Path, output_path: Path, *, debu
         "+faststart",
         str(output_path),
     ]
+    completed = subprocess.run(command, stdout=output, stderr=output)
+    return completed.returncode
+
+
+def _copy_interval_to_mp4(
+    ffmpeg_path: str,
+    input_path: Path,
+    output_path: Path,
+    *,
+    start: float,
+    end: float | None,
+    debug: bool,
+) -> int:
+    output = None if debug else subprocess.DEVNULL
+    command = [
+        ffmpeg_path,
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "info",
+        "-ss",
+        _format_seconds(start),
+        "-i",
+        str(input_path),
+    ]
+    if end is not None:
+        command.extend(["-t", _format_seconds(end - start)])
+    command.extend([
+        "-map",
+        "0",
+        "-dn",
+        "-sn",
+        "-c",
+        "copy",
+        "-avoid_negative_ts",
+        "make_zero",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ])
     completed = subprocess.run(command, stdout=output, stderr=output)
     return completed.returncode
 

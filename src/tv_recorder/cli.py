@@ -77,6 +77,8 @@ def main(
             log_level=log_level,
         )
         raise click.exceptions.Exit(exit_code)
+    except click.exceptions.Exit:
+        raise
     except click.ClickException:
         raise
     except Exception as exc:

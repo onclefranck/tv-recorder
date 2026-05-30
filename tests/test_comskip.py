@@ -49,7 +49,10 @@ def test_run_comskip_accepts_completed_processing_with_nonzero_exit() -> None:
             ini_path=work_dir / "show.comskip.ini",
             commercial_free_path=work_dir / "show.commercial-free.mp4",
             command=["comskip", str(recording)],
-            options={},
+            options={
+                "min_segment_seconds": 15,
+                "min_break_seconds": 105,
+            },
         )
         plan.edl_path.write_text("1.0\t2.0\t0\n", encoding="utf-8")
         recording.with_suffix(".txt").write_text(
@@ -102,6 +105,48 @@ def test_cut_commercials_remuxes_when_edl_is_empty() -> None:
 
     command = run.call_args.args[0]
     assert command[-1] == str(plan.commercial_free_path)
+
+
+def test_cut_commercials_copies_single_remaining_interval() -> None:
+    work_dir = Path("recordings") / f"tv-recorder-comskip-test-{uuid4().hex}"
+    work_dir.mkdir(parents=True)
+    try:
+        recording = work_dir / "show.mp4"
+        recording.write_bytes(b"video")
+        edl_path = work_dir / "show.edl"
+        edl_path.write_text("0.07\t234.11\t0\n", encoding="utf-8")
+        plan = ComskipPlan(
+            recording_path=recording,
+            edl_path=edl_path,
+            ini_path=work_dir / "show.comskip.ini",
+            commercial_free_path=work_dir / "show.commercial-free.mp4",
+            command=["comskip", str(recording)],
+            options={},
+        )
+
+        with (
+            patch("tv_recorder.comskip._media_duration_seconds", return_value=1500.05),
+            patch("tv_recorder.comskip.subprocess.run") as run,
+        ):
+            run.return_value.returncode = 0
+
+            assert cut_commercials(plan, ffmpeg_path="ffmpeg") == 0
+
+        command = run.call_args.args[0]
+        assert command[:8] == [
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "info",
+            "-ss",
+            "234.110",
+            "-i",
+        ]
+        assert "-f" not in command
+        assert command[-1] == str(plan.commercial_free_path)
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
 
 
 def test_build_ini_merges_channel_options() -> None:

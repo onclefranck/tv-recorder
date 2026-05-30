@@ -2,15 +2,21 @@
 
 Command-line recorder for public live TV streams.
 
-## Local Installation
+## Installation
 
 ```powershell
-python -m pip install -e .
+pipx install tv-recorder
 ```
 
 Chromium is installed automatically on first use if Playwright does not already have it.
 
 The recorder uses the `ffmpeg` binary provided by `imageio-ffmpeg`.
+
+For local development from a checkout:
+
+```powershell
+pipx install --editable .
+```
 
 ## Usage
 

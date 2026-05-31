@@ -20,7 +20,7 @@ from tv_recorder.stream_finder import find_stream
 @click.argument("duration", required=False)
 @click.option("--config", "config_path", type=click.Path(path_type=Path), help="Path to a YAML source config file.")
 @click.option("--list", "list_channels", is_flag=True, help="List available sources.")
-@click.option("--output-dir", type=click.Path(path_type=Path), default=Path("recordings"), show_default=True, help="Output directory.")
+@click.option("--output-dir", type=click.Path(path_type=Path), default=Path.cwd, show_default="current directory", help="Output directory.")
 @click.option("--headful", is_flag=True, help="Show Chromium while detecting the stream.")
 @click.option("--timeout-ms", type=int, default=45_000, show_default=True, help="Playwright timeout in milliseconds.")
 @click.option("--ffmpeg", "ffmpeg_path", default="ffmpeg", show_default=True, help="Override the bundled imageio-ffmpeg binary.")

@@ -20,6 +20,16 @@ pipx install --editable .
 
 ## Usage
 
+Start `tv-recorder` without arguments to open the native desktop GUI:
+
+```powershell
+tv-recorder
+```
+
+The GUI uses Python's built-in Tkinter toolkit and exposes the common recording
+and Comskip options with a log panel for command output. Custom YAML
+configuration remains available from the CLI.
+
 ```powershell
 tv-recorder radio-canada.ca now 2h
 ```

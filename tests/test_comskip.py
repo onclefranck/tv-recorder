@@ -1,3 +1,4 @@
+from io import BytesIO
 from pathlib import Path
 import shutil
 from uuid import uuid4
@@ -64,6 +65,38 @@ def test_run_comskip_accepts_completed_processing_with_nonzero_exit() -> None:
             run.return_value.returncode = 1
 
             assert run_comskip(plan) == 0
+    finally:
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
+def test_run_comskip_reports_activity_with_callback() -> None:
+    work_dir = Path("recordings") / f"tv-recorder-comskip-test-{uuid4().hex}"
+    work_dir.mkdir(parents=True)
+    try:
+        recording = work_dir / "show.mp4"
+        recording.write_bytes(b"video")
+        plan = ComskipPlan(
+            recording_path=recording,
+            edl_path=work_dir / "show.edl",
+            ini_path=work_dir / "show.comskip.ini",
+            commercial_free_path=work_dir / "show.commercial-free.mp4",
+            command=["comskip", str(recording)],
+            options={},
+        )
+        plan.edl_path.write_text("1.0\t2.0\t0\n", encoding="utf-8")
+        recording.with_suffix(".txt").write_text(
+            "FILE PROCESSING COMPLETE\n",
+            encoding="utf-8",
+        )
+        frames = []
+
+        with patch("tv_recorder.comskip.subprocess.Popen") as popen:
+            popen.return_value.stdout = BytesIO(b"activity")
+            popen.return_value.wait.return_value = 0
+
+            assert run_comskip(plan, activity_callback=frames.append) == 0
+
+        assert frames
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)
 

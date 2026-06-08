@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -318,7 +319,13 @@ def _media_duration_seconds(ffmpeg: str, path: Path) -> float | None:
     )
 
 
-def run_recording(plan: RecordingPlan, *, debug: bool = False) -> int:
+def run_recording(
+    plan: RecordingPlan,
+    *,
+    debug: bool = False,
+    activity_callback: Callable[[str], None] | None = None,
+    cancellation_event: threading.Event | None = None,
+) -> int:
     plan.capture_path.parent.mkdir(parents=True, exist_ok=True)
     output = None if debug else subprocess.DEVNULL
     stderr = None if debug else subprocess.PIPE
@@ -328,24 +335,25 @@ def run_recording(plan: RecordingPlan, *, debug: bool = False) -> int:
         stdout=output,
         stderr=stderr,
     )
-    activity = _ActivityIndicator("ffmpeg activity")
+    activity = _ActivityIndicator("ffmpeg activity", callback=activity_callback)
     activity.start(process.stderr if not debug else None)
     try:
-        exit_code = process.wait(timeout=plan.duration_seconds + 60)
-    except subprocess.TimeoutExpired:
-        if process.stdin:
-            process.stdin.write(b"q\n")
-            process.stdin.flush()
-        try:
-            exit_code = process.wait(timeout=30)
-        except subprocess.TimeoutExpired:
-            process.terminate()
-            exit_code = process.wait()
+        deadline = time.monotonic() + plan.duration_seconds + 60
+        while True:
+            if cancellation_event and cancellation_event.is_set():
+                _stop_ffmpeg(process)
+                return 130
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                exit_code = _stop_ffmpeg(process)
+                break
+            try:
+                exit_code = process.wait(timeout=min(0.2, remaining))
+                break
+            except subprocess.TimeoutExpired:
+                continue
     except KeyboardInterrupt:
-        if process.stdin:
-            process.stdin.write(b"q\n")
-            process.stdin.flush()
-        exit_code = process.wait()
+        exit_code = _stop_ffmpeg(process)
     finally:
         activity.stop()
 
@@ -359,11 +367,49 @@ def run_recording(plan: RecordingPlan, *, debug: bool = False) -> int:
         plan.capture_path.replace(plan.output_path)
         return _validate_duration(plan)
 
-    final = subprocess.run(plan.final_command, stdout=output, stderr=output)
+    final = _run_cancellable_command(
+        plan.final_command,
+        stdout=output,
+        stderr=output,
+        cancellation_event=cancellation_event,
+    )
     if final.returncode == 0:
         plan.capture_path.unlink(missing_ok=True)
         return _validate_duration(plan)
     return final.returncode
+
+
+def _stop_ffmpeg(process: subprocess.Popen) -> int:
+    if process.stdin:
+        process.stdin.write(b"q\n")
+        process.stdin.flush()
+    try:
+        return process.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        process.terminate()
+        return process.wait()
+
+
+def _run_cancellable_command(
+    command: list[str],
+    *,
+    stdout,
+    stderr,
+    cancellation_event: threading.Event | None = None,
+) -> subprocess.CompletedProcess:
+    if cancellation_event is None:
+        return subprocess.run(command, stdout=stdout, stderr=stderr)
+
+    process = subprocess.Popen(command, stdout=stdout, stderr=stderr)
+    while True:
+        if cancellation_event.is_set():
+            process.terminate()
+            return subprocess.CompletedProcess(command, process.wait(), None, None)
+        try:
+            return_code = process.wait(timeout=0.2)
+            return subprocess.CompletedProcess(command, return_code, None, None)
+        except subprocess.TimeoutExpired:
+            continue
 
 
 def _validate_duration(plan: RecordingPlan) -> int:
@@ -381,8 +427,9 @@ def _validate_duration(plan: RecordingPlan) -> int:
 
 
 class _ActivityIndicator:
-    def __init__(self, label: str) -> None:
+    def __init__(self, label: str, *, callback: Callable[[str], None] | None = None) -> None:
         self.label = label
+        self.callback = callback
         self._enabled = sys.stderr.isatty()
         self._frames = "|/-\\"
         self._index = 0
@@ -410,7 +457,7 @@ class _ActivityIndicator:
             self._tick()
 
     def _tick(self) -> None:
-        if not self._enabled:
+        if not self._enabled and not self.callback:
             return
         now = time.monotonic()
         if now < self._next_update:
@@ -418,5 +465,8 @@ class _ActivityIndicator:
         self._next_update = now + 0.15
         frame = self._frames[self._index % len(self._frames)]
         self._index += 1
-        sys.stderr.write(f"\r{self.label} {frame}")
-        sys.stderr.flush()
+        if self.callback:
+            self.callback(frame)
+        if self._enabled:
+            sys.stderr.write(f"\r{self.label} {frame}")
+            sys.stderr.flush()

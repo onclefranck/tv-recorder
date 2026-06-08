@@ -5,11 +5,14 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import urllib.request
 import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+
+from tv_recorder.recorder import _ActivityIndicator
 
 
 COMSKIP_VERSION = "0.82.012"
@@ -70,10 +73,21 @@ def build_comskip_plan(
     )
 
 
-def run_comskip(plan: ComskipPlan, *, debug: bool = False) -> int:
+def run_comskip(
+    plan: ComskipPlan,
+    *,
+    debug: bool = False,
+    activity_callback: Callable[[str], None] | None = None,
+    cancellation_event: threading.Event | None = None,
+) -> int:
     plan.ini_path.write_text(_build_ini(plan.options), encoding="utf-8")
-    output = None if debug else subprocess.DEVNULL
-    completed = subprocess.run(plan.command, stdout=output, stderr=output)
+    completed = _run_command(
+        plan.command,
+        debug=debug,
+        activity_callback=activity_callback,
+        activity_label="comskip activity",
+        cancellation_event=cancellation_event,
+    )
     if not plan.edl_path.exists():
         if completed.returncode != 0:
             return completed.returncode
@@ -99,7 +113,14 @@ def _build_ini(options: dict) -> str:
     return "".join(f"{key}={value}\n" for key, value in settings.items())
 
 
-def cut_commercials(plan: ComskipPlan, *, ffmpeg_path: str, debug: bool = False) -> int:
+def cut_commercials(
+    plan: ComskipPlan,
+    *,
+    ffmpeg_path: str,
+    debug: bool = False,
+    activity_callback: Callable[[str], None] | None = None,
+    cancellation_event: threading.Event | None = None,
+) -> int:
     cuts = _filter_cuts(_read_edl_cuts(plan.edl_path), plan.options)
     duration = _media_duration_seconds(ffmpeg_path, plan.recording_path) if cuts else None
     if cuts and duration is None:
@@ -113,6 +134,8 @@ def cut_commercials(plan: ComskipPlan, *, ffmpeg_path: str, debug: bool = False)
             plan.recording_path,
             plan.commercial_free_path,
             debug=debug,
+            activity_callback=activity_callback,
+            cancellation_event=cancellation_event,
         )
     if len(keep_intervals) == 1:
         start, end = keep_intervals[0]
@@ -123,11 +146,12 @@ def cut_commercials(plan: ComskipPlan, *, ffmpeg_path: str, debug: bool = False)
             start=start,
             end=end,
             debug=debug,
+            activity_callback=activity_callback,
+            cancellation_event=cancellation_event,
         )
 
     temp_dir = plan.recording_path.with_name(f".{plan.recording_path.stem}.comskip-parts")
     temp_dir.mkdir(parents=True, exist_ok=True)
-    output = None if debug else subprocess.DEVNULL
     segment_paths: list[Path] = []
     try:
         for index, (start, end) in enumerate(keep_intervals, start=1):
@@ -156,7 +180,13 @@ def cut_commercials(plan: ComskipPlan, *, ffmpeg_path: str, debug: bool = False)
                 "make_zero",
                 str(segment_path),
             ])
-            completed = subprocess.run(command, stdout=output, stderr=output)
+            completed = _run_command(
+                command,
+                debug=debug,
+                activity_callback=activity_callback,
+                activity_label="comskip activity",
+                cancellation_event=cancellation_event,
+            )
             if completed.returncode != 0:
                 return completed.returncode
             segment_paths.append(segment_path)
@@ -184,7 +214,13 @@ def cut_commercials(plan: ComskipPlan, *, ffmpeg_path: str, debug: bool = False)
             "+faststart",
             str(plan.commercial_free_path),
         ]
-        completed = subprocess.run(command, stdout=output, stderr=output)
+        completed = _run_command(
+            command,
+            debug=debug,
+            activity_callback=activity_callback,
+            activity_label="comskip activity",
+            cancellation_event=cancellation_event,
+        )
         return completed.returncode
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -261,8 +297,15 @@ def _keep_intervals(cuts: list[tuple[float, float]], duration: float | None) -> 
     ]
 
 
-def _remux_to_mp4(ffmpeg_path: str, input_path: Path, output_path: Path, *, debug: bool) -> int:
-    output = None if debug else subprocess.DEVNULL
+def _remux_to_mp4(
+    ffmpeg_path: str,
+    input_path: Path,
+    output_path: Path,
+    *,
+    debug: bool,
+    activity_callback: Callable[[str], None] | None = None,
+    cancellation_event: threading.Event | None = None,
+) -> int:
     command = [
         ffmpeg_path,
         "-y",
@@ -281,7 +324,13 @@ def _remux_to_mp4(ffmpeg_path: str, input_path: Path, output_path: Path, *, debu
         "+faststart",
         str(output_path),
     ]
-    completed = subprocess.run(command, stdout=output, stderr=output)
+    completed = _run_command(
+        command,
+        debug=debug,
+        activity_callback=activity_callback,
+        activity_label="comskip activity",
+        cancellation_event=cancellation_event,
+    )
     return completed.returncode
 
 
@@ -293,8 +342,9 @@ def _copy_interval_to_mp4(
     start: float,
     end: float | None,
     debug: bool,
+    activity_callback: Callable[[str], None] | None = None,
+    cancellation_event: threading.Event | None = None,
 ) -> int:
-    output = None if debug else subprocess.DEVNULL
     command = [
         ffmpeg_path,
         "-y",
@@ -321,8 +371,49 @@ def _copy_interval_to_mp4(
         "+faststart",
         str(output_path),
     ])
-    completed = subprocess.run(command, stdout=output, stderr=output)
+    completed = _run_command(
+        command,
+        debug=debug,
+        activity_callback=activity_callback,
+        activity_label="comskip activity",
+        cancellation_event=cancellation_event,
+    )
     return completed.returncode
+
+
+def _run_command(
+    command: list[str],
+    *,
+    debug: bool,
+    activity_callback: Callable[[str], None] | None,
+    activity_label: str,
+    cancellation_event: threading.Event | None = None,
+) -> subprocess.CompletedProcess:
+    output = None if debug else subprocess.DEVNULL
+    if activity_callback is None and cancellation_event is None:
+        return subprocess.run(command, stdout=output, stderr=output)
+
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE if activity_callback else output,
+        stderr=subprocess.STDOUT,
+    )
+    activity = _ActivityIndicator(activity_label, callback=activity_callback)
+    activity.start(process.stdout if activity_callback else None)
+    try:
+        while True:
+            if cancellation_event and cancellation_event.is_set():
+                process.terminate()
+                return_code = process.wait()
+                return subprocess.CompletedProcess(command, return_code)
+            try:
+                return_code = process.wait(timeout=0.2)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+    finally:
+        activity.stop()
+    return subprocess.CompletedProcess(command, return_code)
 
 
 def _media_duration_seconds(ffmpeg_path: str, path: Path) -> float | None:

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import shlex
+import sys
+import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import click
@@ -20,7 +23,7 @@ from tv_recorder.stream_finder import find_stream
 @click.argument("duration", required=False)
 @click.option("--config", "config_path", type=click.Path(path_type=Path), help="Path to a YAML source config file.")
 @click.option("--list", "list_channels", is_flag=True, help="List available sources.")
-@click.option("--output-dir", type=click.Path(path_type=Path), default=Path("recordings"), show_default=True, help="Output directory.")
+@click.option("--output-dir", type=click.Path(path_type=Path), default=Path.cwd, show_default="current directory", help="Output directory.")
 @click.option("--headful", is_flag=True, help="Show Chromium while detecting the stream.")
 @click.option("--timeout-ms", type=int, default=45_000, show_default=True, help="Playwright timeout in milliseconds.")
 @click.option("--ffmpeg", "ffmpeg_path", default="ffmpeg", show_default=True, help="Override the bundled imageio-ffmpeg binary.")
@@ -44,6 +47,12 @@ def main(
 ) -> None:
     """Find an HLS stream and record it."""
     try:
+        if _launched_without_arguments():
+            from tv_recorder.gui import main as gui_main
+
+            gui_main()
+            return
+
         config = load_config(config_path)
         if list_channels:
             list_sources(config)
@@ -99,6 +108,9 @@ def run_record_command(
     comskip: bool,
     dry_run: bool,
     log_level: str,
+    activity_callback: Callable[[str], None] | None = None,
+    comskip_activity_callback: Callable[[str], None] | None = None,
+    cancellation_event: threading.Event | None = None,
 ) -> int:
     source = get_source(config, source_key)
     start = parse_start(start_value)
@@ -107,7 +119,13 @@ def run_record_command(
 
     if delay > 0:
         _info(log_level, f"Waiting until {start.isoformat()} ({int(delay)} s).")
-        time.sleep(delay)
+        if cancellation_event and cancellation_event.wait(delay):
+            _info(log_level, "Cancelled before recording started.")
+            return 130
+
+    if cancellation_event and cancellation_event.is_set():
+        _info(log_level, "Cancelled before stream detection.")
+        return 130
 
     _info(log_level, f"Detecting stream for {source.display_name}...")
     stream = find_stream(
@@ -116,6 +134,11 @@ def run_record_command(
         timeout_ms=timeout_ms,
         debug_log=lambda message: _debug(log_level, message),
     )
+
+    if cancellation_event and cancellation_event.is_set():
+        _info(log_level, "Cancelled before recording started.")
+        return 130
+
     output_path = build_output_path(output_dir, source, start)
     plan = build_ffmpeg_plan(
         stream,
@@ -142,7 +165,12 @@ def run_record_command(
         return 0
 
     _info(log_level, f"Recording to {plan.output_path}")
-    exit_code = run_recording(plan, debug=log_level == "debug")
+    exit_code = run_recording(
+        plan,
+        debug=log_level == "debug",
+        activity_callback=activity_callback,
+        cancellation_event=cancellation_event,
+    )
     if exit_code != 0:
         click.echo(f"ffmpeg exited with code {exit_code}.", err=True)
         return exit_code
@@ -153,6 +181,8 @@ def run_record_command(
             plan.output_path,
             ffmpeg_path=plan.ffmpeg_path,
             log_level=log_level,
+            activity_callback=comskip_activity_callback,
+            cancellation_event=cancellation_event,
         )
 
     return 0
@@ -176,6 +206,8 @@ def run_existing_comskip(
     *,
     ffmpeg_path: str,
     log_level: str,
+    activity_callback: Callable[[str], None] | None = None,
+    cancellation_event: threading.Event | None = None,
 ) -> int:
     if not recording_path.exists():
         raise FileNotFoundError(recording_path)
@@ -185,6 +217,8 @@ def run_existing_comskip(
         recording_path,
         ffmpeg_path=resolved_ffmpeg,
         log_level=log_level,
+        activity_callback=activity_callback,
+        cancellation_event=cancellation_event,
     )
 
 
@@ -194,6 +228,8 @@ def run_comskip_pipeline(
     *,
     ffmpeg_path: str,
     log_level: str,
+    activity_callback: Callable[[str], None] | None = None,
+    cancellation_event: threading.Event | None = None,
 ) -> int:
     source_key = _source_key_from_recording(config, recording_path)
     source = get_source(config, source_key) if source_key else None
@@ -210,7 +246,12 @@ def run_comskip_pipeline(
     )
     _info(log_level, f"Running Comskip on {comskip_plan.recording_path}")
     _debug(log_level, f"Comskip command: {shlex.join(comskip_plan.command)}")
-    exit_code = run_comskip(comskip_plan, debug=log_level == "debug")
+    exit_code = run_comskip(
+        comskip_plan,
+        debug=log_level == "debug",
+        activity_callback=activity_callback,
+        cancellation_event=cancellation_event,
+    )
     if exit_code != 0:
         click.echo(f"comskip exited with code {exit_code}.", err=True)
         return exit_code
@@ -221,6 +262,8 @@ def run_comskip_pipeline(
         comskip_plan,
         ffmpeg_path=ffmpeg_path,
         debug=log_level == "debug",
+        activity_callback=activity_callback,
+        cancellation_event=cancellation_event,
     )
     if exit_code != 0:
         click.echo(f"commercial cutting exited with code {exit_code}.", err=True)
@@ -256,6 +299,10 @@ def _print_stream_urls(log_level: str, stream) -> None:
             _info(log_level, f"Recording HLS input {index}: {input_url}")
         return
     _info(log_level, f"Recording HLS URL: {stream.url}")
+
+
+def _launched_without_arguments() -> bool:
+    return len(sys.argv) == 1
 
 
 if __name__ == "__main__":
